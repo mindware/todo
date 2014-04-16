@@ -45,7 +45,7 @@ class Todo
 		elsif("help".start_with? arg[0]) #"remove" 
 			help? arg[1]				
 		elsif("nuke".start_with? arg[0]) #"remove" 
-			print nuke
+			nuke arg[1]
 		else
 			error "Invalid parameters: #{ARGV.join(", ")}"
 			help?
@@ -79,13 +79,20 @@ class Todo
 			end
 		end
 		name = str.strip
-		data = [
-					"✅ #{str}, Things to do:\n#{ "#" * (str.length + 17)}" 
-				]
+		data = {
+					"✅ #{str}, Things to do:\n#{ "#" * (str.length + 17)}" => 
+					{
+						"General" => 
+						{"Done:\n#{ "#" * "Done:".length}" => {}, "Pending:\n#{ "#" * "Pending:".length}" => {}, 
+						 "Completed:\n#{ "#" * "Completed:".length}\n" => {}}
+					}
+				}
 		data = YAML.dump(data) # turn this into yaml
 		file = File.new(@FILE, "w")
 		puts "Creating TODO.yml for '#{str}' in path:\n#{@PWD}"
 		puts "Now spice up your to do list by adding the first task: todo add +General This is a task in MyTasks group example."				
+		# remove those ugly YAML question marks and dashes, while keeping the doc valid.
+		data = data.gsub(/^\?/, " " ).gsub(/^\:/, " ").gsub("- |-", ("    ")).gsub("|-", "  ").gsub("- |", "  ").gsub("   ? ", "     ") #.gsub("   : ","     ").gsub("    |\n", "     \n")
 		file.write(data)
 		file.close()
 		puts data
@@ -113,7 +120,7 @@ class Todo
 		puts "Done"
 	end
 
-	def nuke
+	def nuke(str)
 		if(!find_recursive_todo_path()) 
 			error "There is no To Do List to nuke."
 			return
@@ -124,20 +131,24 @@ class Todo
 				puts "Current directory is: #{@CWD}/"
 			end
 			warning "You will be deleting the list located in: #{@PWD}/"
-			str = ""
-			while(str.to_s.strip == "")
-				print "Continue with nuke? [y/n]: "
-				STDOUT.flush  
-				str = STDIN.gets.chomp    
-				if("yes".start_with? str.downcase)
-					puts "Nuking #{@PWD}/#{@FILE}...."
-					File.delete("#{@PWD}/#{@FILE}")
-					print "Done!"
-				else
-					puts "Nuke canceled."
-					exit
+			# variable that will hold the keyboard input
+			input = "" 			
+			if(str.to_s != "force")			
+				while(input.to_s.strip == "")
+					print "Continue with nuke? [y/n]: "
+					STDOUT.flush  
+					input = STDIN.gets.chomp    
+					if("yes".start_with? input.downcase)
+						break
+					else
+						puts "Nuke canceled."
+						exit
+					end
 				end
 			end
+			puts "Nuking #{@PWD}/#{@FILE}...."
+			File.delete("#{@PWD}/#{@FILE}")
+			puts "Done!"
 		end
 	end
 
@@ -170,8 +181,18 @@ class Todo
 		if(data.include? group) 
 			puts "Congrats the group #{group} exists."
 		else
-			puts "Group #{group} doesn't exist, creating it:"
-			data.push(group[task])
+			puts "Group #{group} doesn't exist, creating it:"						
+			puts data.class
+			puts group 
+			puts task
+			added = { group => task }
+			puts added
+			key = data.keys[0]
+			data = data[key][group] = task
+			puts data.inspect
+			exit
+			data.push()
+			puts group[task].class
 			puts data
 		end
 
