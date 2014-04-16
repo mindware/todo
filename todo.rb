@@ -1,0 +1,277 @@
+require 'yaml'
+require 'pathname'
+
+class Todo 
+
+	def config		
+		@CWD 	= Dir.pwd 		# Get the current path
+		@pwd    = @CWD
+		$DEBUG 	= false			# Debug mode = a little more verbose
+		@FILE  	= "TODO.yml"		# Name of the file to be written
+	end
+
+	# We do a loose find for commands, to make it easy for the user.
+	# ie: User can type 'a', 'ad' or 'add' as a paremeter to add a task. 
+	def initialize(arg) 
+		# From here on, we require 
+		return puts help? if(arg.nil? or arg.length < 1)		
+		config()
+
+		if("init".start_with? arg[0]) # done
+			setup(arg[1])		
+		elsif("add".start_with? arg[0]) # add
+			add( arg[1..-1].join(" ") ) # exclude first param						
+		elsif("check".start_with? arg[0]) # done
+			check(arg[1])			
+		elsif("uncheck".start_with? arg[0]) #"remove" 
+			uncheck(arg[1])			
+		elsif("delete".start_with? arg[0]) #"remove" 
+			delete(arg[1])			
+		elsif("list".start_with? arg[0]) #"remove" 
+			list(arg[1])						
+		# elsif("priority".start_with? arg[0]) # priority
+		# 	priority(arg[1..-1])
+		elsif("find".start_with? arg[0]) # search or find
+			search(arg[1..-1].join(" "))
+		elsif("status".start_with? arg[0]) #"remove" 
+			status()									
+		elsif("remote".start_with? arg[0]) #"remove" 
+			remote(arg[1])
+		elsif("push".start_with? arg[0]) #"remove" 
+			push(arg[1])			
+		elsif("install".start_with? arg[0]) #"remove" 
+			install()			
+		elsif("help".start_with? arg[0]) #"remove" 
+			puts help?					
+		elsif("nuke".start_with? arg[0]) #"remove" 
+			puts nuke
+		else
+			puts "Error. Invalid parameters: #{ARGV.join(", ")}.\n#{help?}"
+		end
+	end
+
+	def error(str)
+		puts "Error: #{str}"
+	end
+
+	def warning(str)
+		puts "Warning: #{str}"
+	end
+	def debug(str)
+		puts "Debug: #{str}"if $DEBUG		
+	end
+
+	def setup(str)
+		if(find_recursive_todo_path()) 
+			puts "A to do list already exists in #{@PWD}/#{@FILE}\nTry 'help', instead of 'init' to learn more."
+			return
+		end		
+		if(str.to_s.strip == "")
+			while(str.to_s.strip == "")
+				puts "What will your To Do list be about? Please specify a name for the project: "
+				STDOUT.flush  
+				str = STDIN.gets.chomp    
+				if(str == "exit" or str == "quit")
+					exit
+				end
+			end
+		end
+		name = str.strip
+		data = [
+					"✅ #{str}, Things to do:\n#{ "#" * (str.length + 17)}" 
+				]
+		data = YAML.dump(data) # turn this into yaml
+		file = File.new(@FILE, "w")
+		puts "Creating TODO.yml for '#{str}' in path:\n#{@PWD}"
+		puts "Now spice up your to do list by adding the first task: todo add +General This is a task in MyTasks group example."				
+		file.write(data)
+		file.close()
+		puts data
+	end
+
+	# Marking a task as completed.
+	def check(arg)
+		puts "Marking the following task as completed: #{arg}"
+	end
+
+	# Marking a task as uncompleted.
+	def uncheck(arg)
+		puts "Marking the following task as uncompleted: #{arg}"
+	end
+
+	def list(arg)
+		if(!find_recursive_todo_path()) 
+			error "No todo list found. Use the parameter 'init' to create one."			
+		end
+		file = File.new(@FILE, "r")
+		file.each do |line|
+			puts line
+		end
+		puts "Done"
+	end
+
+	def nuke
+		if(!find_recursive_todo_path()) 
+			error "There is no To Do List to nuke."
+			return
+		else
+			warning "This will delete your To Do List. There is no turning back. "
+			if @PWD != @CWD
+				warning "The file to be deleted is in a directory that preceeds your current one."
+				puts "Current directory is: #{@CWD}/"
+			end
+			warning "You will be deleting the list located in: #{@PWD}/"
+			str = ""
+			while(str.to_s.strip == "")
+				print "Continue with nuke? [y/n]: "
+				STDOUT.flush  
+				str = STDIN.gets.chomp    
+				if("yes".start_with? str.downcase)
+					puts "Nuking #{@PWD}/#{@FILE}...."
+					File.delete("#{@PWD}/#{@FILE}")
+					print "Done!"
+				else
+					puts "Nuke canceled."
+					exit
+				end
+			end
+		end
+	end
+
+	def add(str)	
+		if(str.to_s == "" or str[0] != "+" or str.split(" ").length < 2)
+			error "Tasks require a +groupname and the description of the task.\n"+
+				  "Command: todo add +groupname task-text\n"+
+				  "Example: todo add +authentication Note to self remember to code a login form."
+			return
+		end						
+
+		str = str.split(" ")
+		task = str[0]
+		group = str[1]
+
+		Dir.chdir(@PWD)
+		if(!File.exists? (@FILE)) 
+			error "No TODO.yml found. You must first type: todo init"
+			return
+		end
+
+		data = YAML.load_file(@FILE)
+
+		# check if this group exists
+		if(data.include? group) 
+			puts "Congrats the group #{group} exists."
+		else
+			puts "#{group} doesn't exist, creating it:"
+			data.push(group[task])
+			puts data
+		end
+
+		puts "Adding the task: #{task}"
+		file = File.new(@FILE, "w")		
+		file.write(YAML.dump(data))
+		file.close()
+		puts data		
+	end
+
+	def priority(arg)
+		puts "Prioritizing task #{arg}"
+	end
+
+	def find(str)
+		puts "Finding \"#{str}\"..."
+	end
+
+	def help?
+		"\t✅ Todo List Command: \n"+
+		# "\t====================\n"+
+		# "\t---------------------\n"+		
+		"\t☑ todo <action> (parameters...)\n"+
+		# "\t---------[ Options ]---------\n"+		
+		"\tinit\t\t- Creates a todo list in this directory, becoming the parent directory.\n"+
+		"\t\t\t  Once done, you can update the todo list from any subdirectory.\n"+
+		"\ta(dd) +grp text - Add a task to a +group-name in the todo list.\n"+ #The task must be in double quotes.
+		"\t\t\t  You may organize tasks under a custom +group, by prepending a +group's name\n"+
+		"\t\t\t  before adding a task's text. If no group specified, default or last one is used.\n"+		
+		"\tc(heck)\t\t- Checks a task as completed (✓). Accepts the following parameters:\n"+
+		"\t\t\t\t+<group_name>\t- Specifies the group the task to be checked belongs to.\n"+
+		"\t\t\t\t<task_id> | all\t- Task to mark as completed.\n"+		
+		"\tu(ncheck)\t- Unchecks a task, marking it as uncompleted (☐).\n"+		
+		"\t\t\t\t+<group_name>\t- Specifies the group the task to be unchecked belongs to.\n"+
+		"\t\t\t\t<task_id> | all\t- Task to mark as uncompleted.\n"+				
+		"\td(elete) id\t- Deletes a task forever. Requires an id as parameter.\n"+
+		"\tl(ist)\t\t- Shows todo list. It will accept the following additional parameters as filters:\n"+
+		"\t\t\t\t+group_name\t- Shows only tasks of the following group.\n"+		
+		"\t\t\t\tu(nchecked) \t- Filters the list, showing only pending (unchecked) tasks.\n"+
+		"\t\t\t\tc(hecked)\t- Filters the list, showing only completed (checked) tasks.\n"+
+		"\tf(ind)\t\t- Find a task in the todo list. Accepts the following parameters:\n"+
+		"\t\t\t\t<task_id>\t- Find specified task by id in the todo list, if it exists.\n"+
+		"\t\t\t\tp(ending)\t- Search only in pending tasks.\n"+
+		"\t\t\t\tc(ompleted)\t- Search only in completed tasks.\n"+
+		"\ts(tatus)\t- Returns a status, such as counts and current default group to be used (last used).\n"+
+		"\tremote\t\t- Set remote server URL to push the todo list to a REST API.\n"+
+		"\tpush\t\t- Push the todo list to the remote server.\n"+
+		"\tinstall\t\t- One time installation on the host machine. Must be in the dir of the script!\n"+
+		"\tnuke\t\t- This will delete your To Do List. No turning back!\n"+		
+		"\thelp <action>\t- A little more info on a specific topic.\n" #The task must be in double quotes.		
+	end
+
+	def install()
+		puts "Installing..."
+		if(!File.exists?("todo.rb"))
+			error "You must be in the same directory of this script."
+			return
+		end
+
+		puts "Setting up aliases 't', 'todo' and 'task' in bash, for easy access from terminal."
+		command = "alias t='ruby #{@CWD}/todo.rb';\n"+
+				  "alias todo='ruby #{@CWD}/todo.rb';\n"+
+				  "alias task='ruby #{@CWD}/todo.rb'" 				  
+		system("echo \"#{command}\" >> ~/.bash_profile")
+		puts "Loading new aliases...\n------"		
+		system("source ~/.bash_profile")
+		puts "------"
+		puts "Done!" 
+		puts "Now take it for a spin, type: 't help'"
+	end
+
+	# By ascending directories recursively, we try to find an existing @FILE name.
+	def find_recursive_todo_path() 
+		# Here we do something similar to: git rev-parse --show-toplevel
+		debug ("Ascendant recursive search from: #{@CWD}")
+		Pathname.new(@CWD.to_s).ascend { |dir| 
+			debug "searching... #{dir}"
+			if(todo_file_exists?(dir))
+			   Dir.chdir(dir) 				
+			   @PWD = Dir.pwd			   
+			   return true
+			end
+		}		
+		return false
+	end
+
+	def todo_file_exists?(dir)
+		# Here we essentially do: Pathname.children(with_folders=false)
+		# to find if the directory contains a TODO.yml		
+ 		dir.children(false).each do |file|
+ 				debug "Searching for #{@FILE} vs #{file}" 				 			
+ 			if file.basename.to_s == @FILE.to_s
+ 				debug "We found a #{@FILE} in #{dir}!"
+ 				return true
+ 			end
+ 		end 
+ 		return false
+	end
+
+	def create_hidden_dir
+		
+	end
+
+	# we might use this later
+	def fix_git_ignore
+		@GIT = system("git rev-parse --show-toplevel").to_s
+	end
+
+end
+
+Todo.new(ARGV)
