@@ -4,18 +4,19 @@ require 'pathname'
 class Todo 
 
 	def config		
-		@CWD 	= Dir.pwd 		# Get the current path
+		@CWD 	= Dir.pwd 							# Get the current path
 		@pwd    = @CWD
-		$DEBUG 	= false			# Debug mode = a little more verbose
-		@FILE  	= "TODO.yml"		# Name of the file to be written
+		$DEBUG 	= false								# Debug mode = a little more verbose
+		@FILE  	= "TODO.yml"						# Name of the file to be written
+		@GIT   	= "https://github.com/mindware/"	# Official Github repo
 	end
 
 	# We do a loose find for commands, to make it easy for the user.
 	# ie: User can type 'a', 'ad' or 'add' as a paremeter to add a task. 
 	def initialize(arg) 
-		# From here on, we require 
-		return puts help? if(arg.nil? or arg.length < 1)		
 		config()
+		# From here on, we require 
+		return help? if(arg.nil? or arg.length < 1)		
 
 		if("init".start_with? arg[0]) # done
 			setup(arg[1])		
@@ -42,11 +43,12 @@ class Todo
 		elsif("install".start_with? arg[0]) #"remove" 
 			install()			
 		elsif("help".start_with? arg[0]) #"remove" 
-			puts help?					
+			help? arg[1]				
 		elsif("nuke".start_with? arg[0]) #"remove" 
-			puts nuke
+			print nuke
 		else
-			puts "Error. Invalid parameters: #{ARGV.join(", ")}.\n#{help?}"
+			error "Invalid parameters: #{ARGV.join(", ")}"
+			help?
 		end
 	end
 
@@ -107,6 +109,7 @@ class Todo
 		file.each do |line|
 			puts line
 		end
+		file.close() 
 		puts "Done"
 	end
 
@@ -139,6 +142,11 @@ class Todo
 	end
 
 	def add(str)	
+		if(!find_recursive_todo_path()) 
+			error "There is no To Do List yet. Use the parameter 'init' to set it up."
+			return
+		end
+
 		if(str.to_s == "" or str[0] != "+" or str.split(" ").length < 2)
 			error "Tasks require a +groupname and the description of the task.\n"+
 				  "Command: todo add +groupname task-text\n"+
@@ -147,8 +155,8 @@ class Todo
 		end						
 
 		str = str.split(" ")
-		task = str[0]
-		group = str[1]
+		group = str[0]		
+		task = str[1]
 
 		Dir.chdir(@PWD)
 		if(!File.exists? (@FILE)) 
@@ -162,7 +170,7 @@ class Todo
 		if(data.include? group) 
 			puts "Congrats the group #{group} exists."
 		else
-			puts "#{group} doesn't exist, creating it:"
+			puts "Group #{group} doesn't exist, creating it:"
 			data.push(group[task])
 			puts data
 		end
@@ -182,38 +190,20 @@ class Todo
 		puts "Finding \"#{str}\"..."
 	end
 
-	def help?
-		"\t✅ Todo List Command: \n"+
-		# "\t====================\n"+
-		# "\t---------------------\n"+		
-		"\t☑ todo <action> (parameters...)\n"+
-		# "\t---------[ Options ]---------\n"+		
-		"\tinit\t\t- Creates a todo list in this directory, becoming the parent directory.\n"+
-		"\t\t\t  Once done, you can update the todo list from any subdirectory.\n"+
-		"\ta(dd) +grp text - Add a task to a +group-name in the todo list.\n"+ #The task must be in double quotes.
-		"\t\t\t  You may organize tasks under a custom +group, by prepending a +group's name\n"+
-		"\t\t\t  before adding a task's text. If no group specified, default or last one is used.\n"+		
-		"\tc(heck)\t\t- Checks a task as completed (✓). Accepts the following parameters:\n"+
-		"\t\t\t\t+<group_name>\t- Specifies the group the task to be checked belongs to.\n"+
-		"\t\t\t\t<task_id> | all\t- Task to mark as completed.\n"+		
-		"\tu(ncheck)\t- Unchecks a task, marking it as uncompleted (☐).\n"+		
-		"\t\t\t\t+<group_name>\t- Specifies the group the task to be unchecked belongs to.\n"+
-		"\t\t\t\t<task_id> | all\t- Task to mark as uncompleted.\n"+				
-		"\td(elete) id\t- Deletes a task forever. Requires an id as parameter.\n"+
-		"\tl(ist)\t\t- Shows todo list. It will accept the following additional parameters as filters:\n"+
-		"\t\t\t\t+group_name\t- Shows only tasks of the following group.\n"+		
-		"\t\t\t\tu(nchecked) \t- Filters the list, showing only pending (unchecked) tasks.\n"+
-		"\t\t\t\tc(hecked)\t- Filters the list, showing only completed (checked) tasks.\n"+
-		"\tf(ind)\t\t- Find a task in the todo list. Accepts the following parameters:\n"+
-		"\t\t\t\t<task_id>\t- Find specified task by id in the todo list, if it exists.\n"+
-		"\t\t\t\tp(ending)\t- Search only in pending tasks.\n"+
-		"\t\t\t\tc(ompleted)\t- Search only in completed tasks.\n"+
-		"\ts(tatus)\t- Returns a status, such as counts and current default group to be used (last used).\n"+
-		"\tremote\t\t- Set remote server URL to push the todo list to a REST API.\n"+
-		"\tpush\t\t- Push the todo list to the remote server.\n"+
-		"\tinstall\t\t- One time installation on the host machine. Must be in the dir of the script!\n"+
-		"\tnuke\t\t- This will delete your To Do List. No turning back!\n"+		
-		"\thelp <action>\t- A little more info on a specific topic.\n" #The task must be in double quotes.		
+	def help?(file=nil)
+		if(file.to_s == "")
+			file = "help"					
+		end
+		filepath = File.expand_path(File.dirname(__FILE__)) +"/help/#{file}.txt"
+		if(File.exists?( filepath ))
+			file = File.new(filepath, "r")
+			file.each do |line|
+				print line
+			end
+			file.close()
+		else
+			error "Your helpfile folder is missing or damaged. Please reinstall from:\n#{@GIT}"
+		end
 	end
 
 	def install()
@@ -261,15 +251,6 @@ class Todo
  			end
  		end 
  		return false
-	end
-
-	def create_hidden_dir
-		
-	end
-
-	# we might use this later
-	def fix_git_ignore
-		@GIT = system("git rev-parse --show-toplevel").to_s
 	end
 
 end
