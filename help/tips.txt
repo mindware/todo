@@ -1,0 +1,6 @@
+Here are some help files to get you started:
+- todo help install
+- todo help add
+- todo help list
+
+To see your todo list, type: 'todo list', or simply 't list'

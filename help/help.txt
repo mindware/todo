@@ -1,5 +1,4 @@
-	✅ Todo List Command: 
-	☑ todo <action> (parameters...)
+	✅ Todo List Command: 	☑ todo <action> (parameters...)
 	init		- Creates a todo list in this directory, becoming the parent directory.
 			  Once done, you can update the todo list from any subdirectory.
 	a(dd) +grp text - Add a task to a +group-name in the todo list.
@@ -12,6 +11,7 @@
 				+<group_name>	- Specifies the group the task to be unchecked belongs to.
 				<task_id> | all	- Task to mark as uncompleted.
 	d(elete) id	- Deletes a task forever. Requires an id as parameter.
+	desc <text> - Displays the current description, or saves a new one for project if provided.
 	l(ist)		- Shows todo list. It will accept the following additional parameters as filters:
 				+group_name	- Shows only tasks of the following group.
 				u(nchecked) 	- Filters the list, showing only pending (unchecked) tasks.
@@ -24,5 +24,5 @@
 	remote		- Set remote server URL to push the todo list to a REST API.
 	push		- Push the todo list to the remote server.
 	install		- One time installation on the host machine. Must be in the dir of the script!
-	nuke		- This will delete your To Do List. No turning back! Parameter 'force' skips prompt.
+	nuke		- This deletes the to do list content (json & txt). Parameter 'force' skips safe prompt.
 	help <action>	- A little more info on a specific topic.

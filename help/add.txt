@@ -1,0 +1,27 @@
+
+Adding Tasks:
+-------------
+Once you've initialized a to do list, you can run commands on it from any of its
+subdirectories, it'll automatically find it. Cool, eh? 
+
+You can add tasks to your to do list by simply typing any of the
+following commands:
+
+"todo add <your task here>"
+"t add <your task here>"
+"t a <your task here>"
+
+Example #1
+-----------
+"t a Remember to buy the milk." 
+
+Typing the command above would create a pending tasks in the default task group for:
+"Remember to buy the milk."
+
+Example #2:
+-----------
+"todo add +authentication Design the login form for entering credentials." 
+
+Typing the command above would create a pending task in the custom 
+group "+authentication", with the task: "Design the login form for entering credentials.
+

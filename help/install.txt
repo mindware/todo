@@ -1,0 +1,16 @@
+Installation:
+-------------
+If you're running this script via 'ruby todo.rb', 
+it's much easier to simply use 't', 'task' or 'todo'.
+
+Let us set that up for you. Simply the following command 
+and we'll do the rest:
+	ruby todo.rb install
+
+Adding Tasks:
+-------------
+You can add tasks to your To Do list by simply typing any of the
+following commands:
+	todo add <your task here> 
+	t add <your task here>
+	t a <your task here>

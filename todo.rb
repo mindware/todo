@@ -1,3 +1,5 @@
+# Developed by Andrés Colón Pérez
+# http://github.com/mindware/
 require 'yaml'
 require 'json'
 require 'pathname'
@@ -6,10 +8,15 @@ class Todo
 
 	def config		
 		@CWD 	= Dir.pwd 							# Get the current path
-		@pwd    = @CWD
+		@PWD    = Pathname.new(@CWD).to_s 			# Get the filepath
 		$DEBUG 	= false								# Debug mode = a little more verbose
-		@FILE  	= "TODO.json"						# Name of the file to be written
+		@FILE  	= ".TODO.json"						# Name of the hidden file that contains data.
+		@TXT 	= "TODO.txt"						# Name of file we render text to (overwrites).
 		@GIT   	= "https://github.com/mindware/"	# Official Github repo
+		# @disclaimer = 	"# Auto-generated file. Manual edits are overwritten. \n"+
+		# 				"# Get it here: http://github.com/mindware/todo\n\n"		
+		@disclaimer = 	"# Auto-generated list using: github.com/mindware/todo\n"
+		@default_group = "+Tasks"			# The task group to use when no group is specified.
 	end
 
 	# We do a loose find for commands, to make it easy for the user.
@@ -95,17 +102,31 @@ class Todo
 		return data		
 	end
 
-	def put_json_into_file(data)
+	def save_json_into_file(data)
 		begin
 			data = data.to_json 		# turn this into json
 			file = File.new(@FILE, "w")			
+			debug "Saving '#{@PWD}/#{@FILE}' ..."
+			file.write(data +"\n")
+			debug " Done."			
+			file.close()
+			puts "Saved your brand new list."				
 		rescue Exception => e
-			error "Could not put json into file. Here's the error:\n#{e.inspect}"
-		end
-		print "Saving #{@PWD}/#{@FILE}..."
-		file.write(data +"\n")
-		puts "Done."
-		file.close()				
+			error "Could not save #{@FILE} in #{@PWD} - Here's the error:\n#{e.inspect}"
+		end			
+	end
+
+	def save_txt_into_file()
+		begin 
+			debug "Saving text file in #{@TXT} in folder: #{@PWD}"
+			file = File.new("#{@PWD}/#{@TXT}", "w")		
+			data = render_txt
+			data << @disclaimer
+			file.write(data)
+			file.close()
+		rescue Exception => e
+			error "An error ocurred while rendering the todo.txt file:\n#{e.inspect}"
+		end			
 	end
 
 	def description(str)
@@ -129,21 +150,24 @@ class Todo
 		end
 		name = str.strip
 		data = {
-					"✅ #{str}, Things to do:" => 
+					"#{str}" => 
 					{
-						"Description" => "This is a description",
-						"+Tasks" => 
-						{
-						 "Pending" => [],
-						  "Done" => []
-						}
+						# "Description" => "This is a description",
+						# "#{@ffault_group}" => 
+						# {
+						#  "Pending" => [],
+						#   "Done" => []
+						# }
 					}
 				}
-		puts "Creating #{@FILE} for '#{str}' in path:\n#{@PWD}"
-		puts "Now spice up your to do list by adding the first task: todo add +General This is a task in MyTasks group example."				
-		put_json_into_file(data)		
+		debug "Creating #{@FILE} for '#{str}' in path:\n#{@PWD}"
+		# debug "Now spice up your to do list by adding the first task: todo add +General This is a task in MyTasks group example."				
+		puts "Your brand new To Do list is ready! Congratulations!"
+		help? "tips"
+		save_json_into_file(data)		
+		save_txt_into_file()
 		puts "The To Do List looks currently like this:"
-		puts data
+		list()
 	end
 
 	# Marking a task as completed.
@@ -156,34 +180,65 @@ class Todo
 		puts "Marking the following task as uncompleted: #{arg}"
 	end
 
-	def list(arg)
+	# Renders the JSON file to screen, in a user friendly format.
+	def render_txt(arg=nil) 
 		if(!find_recursive_todo_path()) 
 			error "No todo list found. Use the parameter 'init' to create one."			
 		end
+		output = ""
 		data = get_json_from_file()
 		data.each do |project, groups|
-			puts "\n\t#{project}\n"+
-				 "\t#{"=" * (project.to_s.length + 1)}\n\n"
+			# if(project == "#Stats")
+			# 	next
+			# end
+
+			output << "\n\t✅ Project: #{project}\n"+
+				 	  "\t#{"=" * ("✅ Project: #{project}".length)}\n\n"
 			groups.each do |group, statuses|
 				# if this a group name, it starts with +
 				if(group.to_s[0] == "+")
-					puts "\n\t#{group}:\n"+
-					     "\t#{"-" * (group.to_s.length + 1)}\n"										
+					output << "\n\t#{group}:\n"+
+					     "\t#{"-" * (group.to_s.length + 1)}\n\n"										
+					# this variable tells us if we haven't found
+					# any tasks in a single group. We instantiate
+					# to nil, and set it to false if something found.
+					# Only if it remains nil, will it be set to false
+					# if nothing found, otherwise, at least something
+					# was found and it remains unused.
+					no_entries = nil
 					statuses.each do |status, tasks|
-						puts "\t\t#{status}: "							 
-						tasks.each do |task| 
-							puts "\t\t\t☐ #{task}"
+						if(tasks.length > 0)
+							# we found at least one task in one of the statuses
+							# so							
+							no_entries = false
+							output << "\t#{status}: \n"							 
+							count = 0
+							for task in tasks
+								count = count + 1
+								output << "\t\t#{count}. "
+								output << "#{(status == "Done" ? "✓" : "☐")} #{task}\n"
+							end
+						else
+							no_entries = true if no_entries.nil?
 						end
+					end
+					if no_entries == true
+						output << "\tNothing here yet, add a task with:\n\ttask add <your text here> \n"
 					end
 				else
 					# For general information, non-groups, such as description:
-					puts "\t#{group}:\n"+
-						 "\t#{"-" * (group.to_s.length + 1)}\n"										
-					puts "\t#{statuses}\n"
+					output << "\n\t#{group}:\n\n"+
+						 "\t#{"-" * (group.to_s.length + 1)}\n\n"
+					output << "\t#{statuses}\n\n"
 				end
 			end
 		end
-		puts "Done"
+		output << "\n"
+	end
+
+	# Simply outputs to screen the result of render_txt()
+	def list(arg=nil)
+		puts render_txt(arg)
 	end
 
 	def nuke(str)
@@ -191,7 +246,7 @@ class Todo
 			error "There is no To Do List to nuke."
 			return
 		else
-			warning "This will delete your To Do List. There is no turning back. "
+			warning "This will delete the To Do List. There is no turning back. "
 			if @PWD != @CWD
 				warning "The file to be deleted is in a directory that preceeds your current one."
 				puts "File to be deleted is in: #{@PWD}/"				
@@ -199,7 +254,7 @@ class Todo
 			end
 			# variable that will hold the keyboard input
 			input = "" 			
-			if(str.to_s != "force")			
+			if(str.to_s != "force" or str.to_s != "it")			
 				while(input.to_s.strip == "")
 					print "Continue with nuke? [Y/n]: "
 					STDOUT.flush  
@@ -212,9 +267,16 @@ class Todo
 					end
 				end
 			end
-			puts "Nuking #{@PWD}/#{@FILE}...."
-			File.delete("#{@PWD}/#{@FILE}")
-			puts "Done!"
+
+			begin
+				File.delete("#{@PWD}/#{@FILE}")
+				puts "Removed: #{@PWD}/#{@FILE}"				
+				File.delete("#{@PWD}/#{@TXT}")
+				puts "Removed: #{@PWD}/#{@TXT}"											
+				puts "Done!"
+			rescue Exception => e
+				debug "An error ocurred while deleting the todo files. Error:\n#{e.inspect}"
+			end
 		end
 	end
 
@@ -225,10 +287,11 @@ class Todo
 		end
 
 		if(str.to_s == "" or str[0] != "+" or str.split(" ").length < 2)
-			error "Tasks require a +groupname and the description of the task.\n"+
-				  "Command: todo add +groupname task-text\n"+
-				  "Example: todo add +authentication Note to self remember to code a login form."
-			return
+			str = "#{@default_group} #{str}"
+			# error "Tasks require a +groupname and the description of the task.\n"+
+			# 	  "Command: todo add +groupname task-text\n"+
+			# 	  "Example: todo add +authentication Note to self remember to code a login form."
+			# return
 		end						
 
 		str = str.split(" ")
@@ -282,7 +345,9 @@ class Todo
 									  "Done" => []
 								}			
 		end
-		put_json_into_file(data)	
+		save_json_into_file(data)	# saves json data
+		save_txt_into_file()		# renders text file from json.
+		list()
 	end
 
 	def priority(arg)
