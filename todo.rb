@@ -1,4 +1,5 @@
 require 'yaml'
+require 'json'
 require 'pathname'
 
 class Todo 
@@ -7,7 +8,7 @@ class Todo
 		@CWD 	= Dir.pwd 							# Get the current path
 		@pwd    = @CWD
 		$DEBUG 	= false								# Debug mode = a little more verbose
-		@FILE  	= "TODO.yml"						# Name of the file to be written
+		@FILE  	= "TODO.json"						# Name of the file to be written
 		@GIT   	= "https://github.com/mindware/"	# Official Github repo
 	end
 
@@ -22,29 +23,31 @@ class Todo
 			setup(arg[1])		
 		elsif("add".start_with? arg[0]) # add
 			add( arg[1..-1].join(" ") ) # exclude first param						
-		elsif("check".start_with? arg[0]) # done
+		elsif("check".start_with? arg[0]) # marks a task as done
 			check(arg[1])			
-		elsif("uncheck".start_with? arg[0]) #"remove" 
+		elsif("uncheck".start_with? arg[0]) # marks as uncomplete 
 			uncheck(arg[1])			
-		elsif("delete".start_with? arg[0]) #"remove" 
+		elsif("delete".start_with? arg[0]) # deletes a task 
 			delete(arg[1])			
-		elsif("list".start_with? arg[0]) #"remove" 
+		elsif("description".start_with? arg[0]) #"description" 
+			description(arg[1])						
+		elsif("list".start_with? arg[0]) # lists tasks
 			list(arg[1])						
 		# elsif("priority".start_with? arg[0]) # priority
 		# 	priority(arg[1..-1])
 		elsif("find".start_with? arg[0]) # search or find
 			search(arg[1..-1].join(" "))
-		elsif("status".start_with? arg[0]) #"remove" 
-			status()									
-		elsif("remote".start_with? arg[0]) #"remove" 
+		elsif("status".start_with? arg[0]) 
+			status()							
+		elsif("remote".start_with? arg[0]) 
 			remote(arg[1])
-		elsif("push".start_with? arg[0]) #"remove" 
+		elsif("push".start_with? arg[0]) 
 			push(arg[1])			
-		elsif("install".start_with? arg[0]) #"remove" 
+		elsif("install".start_with? arg[0])
 			install()			
-		elsif("help".start_with? arg[0]) #"remove" 
+		elsif("help".start_with? arg[0]) 
 			help? arg[1]				
-		elsif("nuke".start_with? arg[0]) #"remove" 
+		elsif("nuke".start_with? arg[0]) 
 			nuke arg[1]
 		else
 			error "Invalid parameters: #{ARGV.join(", ")}"
@@ -61,6 +64,52 @@ class Todo
 	end
 	def debug(str)
 		puts "Debug: #{str}"if $DEBUG		
+	end
+
+	# Returns the JSON contents of the file.
+	def get_json_from_file()
+		if(!find_recursive_todo_path()) 
+			error "No todo list found. Use the parameter 'init' to create one."	
+			exit
+		end
+		# where we'll store our data
+		data = ""
+		# open the file to get the contents
+		file = File.new(@FILE, "r")
+		# read the file and load up the data within it to memory
+		file.each do |line|
+			# read each line
+			data << line
+		end
+		# close the file, since we're done for now
+		file.close() 
+		# convert the data to JSON:
+		begin 
+			data = JSON.parse(data)
+		rescue Exception => e
+			# When in doubt, print errors.
+			error "Invalid JSON in #{@FILE}. This is weird... Here's the error:\n#{e.inspect}"
+			exit
+		end
+		# return the JSON.
+		return data		
+	end
+
+	def put_json_into_file(data)
+		begin
+			data = data.to_json 		# turn this into json
+			file = File.new(@FILE, "w")			
+		rescue Exception => e
+			error "Could not put json into file. Here's the error:\n#{e.inspect}"
+		end
+		print "Saving #{@PWD}/#{@FILE}..."
+		file.write(data +"\n")
+		puts "Done."
+		file.close()				
+	end
+
+	def description(str)
+	
 	end
 
 	def setup(str)
@@ -80,21 +129,20 @@ class Todo
 		end
 		name = str.strip
 		data = {
-					"✅ #{str}, Things to do:\n#{ "#" * (str.length + 17)}" => 
+					"✅ #{str}, Things to do:" => 
 					{
-						"General" => 
-						{"Done:\n#{ "#" * "Done:".length}" => {}, "Pending:\n#{ "#" * "Pending:".length}" => {}, 
-						 "Completed:\n#{ "#" * "Completed:".length}\n" => {}}
+						"Description" => "This is a description",
+						"+Tasks" => 
+						{
+						 "Pending" => [],
+						  "Done" => []
+						}
 					}
 				}
-		data = YAML.dump(data) # turn this into yaml
-		file = File.new(@FILE, "w")
-		puts "Creating TODO.yml for '#{str}' in path:\n#{@PWD}"
+		puts "Creating #{@FILE} for '#{str}' in path:\n#{@PWD}"
 		puts "Now spice up your to do list by adding the first task: todo add +General This is a task in MyTasks group example."				
-		# remove those ugly YAML question marks and dashes, while keeping the doc valid.
-		data = data.gsub(/^\?/, " " ).gsub(/^\:/, " ").gsub("- |-", ("    ")).gsub("|-", "  ").gsub("- |", "  ").gsub("   ? ", "     ") #.gsub("   : ","     ").gsub("    |\n", "     \n")
-		file.write(data)
-		file.close()
+		put_json_into_file(data)		
+		puts "The To Do List looks currently like this:"
 		puts data
 	end
 
@@ -112,11 +160,29 @@ class Todo
 		if(!find_recursive_todo_path()) 
 			error "No todo list found. Use the parameter 'init' to create one."			
 		end
-		file = File.new(@FILE, "r")
-		file.each do |line|
-			puts line
+		data = get_json_from_file()
+		data.each do |project, groups|
+			puts "\n\t#{project}\n"+
+				 "\t#{"=" * (project.to_s.length + 1)}\n\n"
+			groups.each do |group, statuses|
+				# if this a group name, it starts with +
+				if(group.to_s[0] == "+")
+					puts "\n\t#{group}:\n"+
+					     "\t#{"-" * (group.to_s.length + 1)}\n"										
+					statuses.each do |status, tasks|
+						puts "\t\t#{status}: "							 
+						tasks.each do |task| 
+							puts "\t\t\t☐ #{task}"
+						end
+					end
+				else
+					# For general information, non-groups, such as description:
+					puts "\t#{group}:\n"+
+						 "\t#{"-" * (group.to_s.length + 1)}\n"										
+					puts "\t#{statuses}\n"
+				end
+			end
 		end
-		file.close() 
 		puts "Done"
 	end
 
@@ -128,17 +194,17 @@ class Todo
 			warning "This will delete your To Do List. There is no turning back. "
 			if @PWD != @CWD
 				warning "The file to be deleted is in a directory that preceeds your current one."
-				puts "Current directory is: #{@CWD}/"
+				puts "File to be deleted is in: #{@PWD}/"				
+				puts "Your current directory is: #{@CWD}/"
 			end
-			warning "You will be deleting the list located in: #{@PWD}/"
 			# variable that will hold the keyboard input
 			input = "" 			
 			if(str.to_s != "force")			
 				while(input.to_s.strip == "")
-					print "Continue with nuke? [y/n]: "
+					print "Continue with nuke? [Y/n]: "
 					STDOUT.flush  
 					input = STDIN.gets.chomp    
-					if("yes".start_with? input.downcase)
+					if(["y", "yes"].include? input.downcase)
 						break
 					else
 						puts "Nuke canceled."
@@ -167,40 +233,56 @@ class Todo
 
 		str = str.split(" ")
 		group = str[0]		
-		task = str[1]
+		task = str[1..-1].join(" ")
 
 		Dir.chdir(@PWD)
 		if(!File.exists? (@FILE)) 
-			error "No TODO.yml found. You must first type: todo init"
+			error "No #{@FILE} found. You must first type: todo init"
 			return
 		end
+		data = "" 
+		file = File.new(@FILE, "r")
+		file.each do |line|
+			data << line
+		end
+		file.close() 
 
-		data = YAML.load_file(@FILE)
-
-		# check if this group exists
-		if(data.include? group) 
-			puts "Congrats the group #{group} exists."
-		else
-			puts "Group #{group} doesn't exist, creating it:"						
-			puts data.class
-			puts group 
-			puts task
-			added = { group => task }
-			puts added
-			key = data.keys[0]
-			data = data[key][group] = task
-			puts data.inspect
+		begin
+			data = JSON.parse(data)
+		rescue Exception => e
+			error "Invalid JSON in #{@FILE}. This is weird... Did you manually edit it?\nHere's the error:\n#{e.inspect}"
 			exit
-			data.push()
-			puts group[task].class
-			puts data
 		end
 
-		puts "Adding the task: #{task}"
-		file = File.new(@FILE, "w")		
-		file.write(YAML.dump(data))
-		file.close()
-		puts data		
+		# check if this group exists
+		name = data.keys[0]
+		groups = []
+		# iterate through existing groups, referred to as g here.
+		data[name].keys.each do |g|
+			groups << g if g.to_s.start_with? "+"
+		end
+
+		debug "I found these groups: #{groups}"
+
+		if(groups.include? group) 
+			# puts "The group #{group} already exists."
+			if(data[name][group]["Pending"].include? task)
+				error "That task already exists."
+				exit
+			else
+				puts "Added task \"#{task}\", under the \"#{group}\" group."
+				data[name][group]["Pending"].push("#{task}")
+			end
+		else
+			puts "Adding new group '#{group}'."	
+			puts "Adding task: #{task}."
+			# add the task to this group and set up task statuses.			
+			data[name][group] = {			 
+									 "Pending" => ["#{task}"],
+									  "Done" => []
+								}			
+		end
+		put_json_into_file(data)	
 	end
 
 	def priority(arg)
@@ -263,7 +345,7 @@ class Todo
 
 	def todo_file_exists?(dir)
 		# Here we essentially do: Pathname.children(with_folders=false)
-		# to find if the directory contains a TODO.yml		
+		# to find if the directory contains a @FILE		
  		dir.children(false).each do |file|
  				debug "Searching for #{@FILE} vs #{file}" 				 			
  			if file.basename.to_s == @FILE.to_s
