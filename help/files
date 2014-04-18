@@ -1,0 +1,7 @@
+A todo text file is generated automatically every time a task is
+added. Any manual entries into the .txt file are overwritten on 
+every new invocation of the todo command. We don't really use
+the TODO.txt for anything other than rendering.
+
+The system keeps track of tasks using a hidden json file next
+to the TODO.txt file.

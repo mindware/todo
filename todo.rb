@@ -13,9 +13,11 @@ class Todo
 		@FILE  	= ".TODO.json"						# Name of the hidden file that contains data.
 		@TXT 	= "TODO.txt"						# Name of file we render text to (overwrites).
 		@GIT   	= "https://github.com/mindware/"	# Official Github repo
+		@NOT_DONE_STATUS = "Pending"
+		@DONE_STATUS 	 = "Done"
 		# @disclaimer = 	"# Auto-generated file. Manual edits are overwritten. \n"+
 		# 				"# Get it here: http://github.com/mindware/todo\n\n"		
-		@disclaimer = 	"# Auto-generated list using: github.com/mindware/todo\n"
+		@disclaimer = 	"---\nAuto-generated using: github.com/mindware/todo\n"
 		@default_group = "+Tasks"			# The task group to use when no group is specified.
 	end
 
@@ -36,10 +38,10 @@ class Todo
 			uncheck(arg[1])			
 		elsif("delete".start_with? arg[0]) # deletes a task 
 			delete(arg[1])			
-		elsif("description".start_with? arg[0]) #"description" 
-			description(arg[1])						
+		# elsif("description".start_with? arg[0]) #"description" 
+		# 	description(arg[1])						
 		elsif("list".start_with? arg[0]) # lists tasks
-			list(arg[1])						
+			list(arg[1..-1])						
 		# elsif("priority".start_with? arg[0]) # priority
 		# 	priority(arg[1..-1])
 		elsif("find".start_with? arg[0]) # search or find
@@ -129,9 +131,9 @@ class Todo
 		end			
 	end
 
-	def description(str)
+	# def description(str)
 	
-	end
+	# end
 
 	def setup(str)
 		if(find_recursive_todo_path()) 
@@ -185,7 +187,47 @@ class Todo
 		if(!find_recursive_todo_path()) 
 			error "No todo list found. Use the parameter 'init' to create one."			
 		end
-		output = ""
+		# var that will hold all the output of this method
+		output = ""		
+		# when filters are required
+		filter_status		= nil
+		filter_group		= nil
+		filter_task			= nil
+		if(!arg.nil?)		
+			if(arg.length > 2)
+				error "Too many options. Try 'todo help list' for more information on available parameters."
+				return
+			else
+				if(["unchecked", "u", "p", "pending"].include? arg[0].to_s)		
+					filter_status = @NOT_DONE_STATUS				
+					output << "Filtering for #{@NOT_DONE_STATUS.downcase} tasks.\n"					
+				elsif(["checked", "c", "d", "done", "complete", "completed"].include? arg[0].to_s)
+					filter_status = @DONE_STATUS		
+					output << "Filtering for #{@DONE_STATUS.downcase} tasks.\n"
+				elsif(arg[0].to_s[0] == "+")  
+					# You cannot filter by group and then status. It's status, then group. 
+					# We error out gracefully if someone does it:
+					if(arg.length == 2)	
+						error "You must first filter tasks status (checked or unchecked), and then by group.\n"+
+						"Example: 'todo list checked +mygroup', which is the same as: 't l c +mygroup'"
+						exit
+					end
+					# if the first character of the argument is a +, we're
+					# filtering by group.
+					filter_group = arg[0].to_s
+					output << "Applying filter for group '#{filter_group}'.\n"	
+				elsif(arg[0].to_s.strip.length > 0)
+					filter_task = arg[0].to_s.strip
+					output << "Applying filter for tasks that contain '#{filter_task}'.\n"
+				end						
+				if(arg.length == 2)
+					if(arg[1].to_s[0] == "+")
+						filter_group = arg[1].to_s
+					end
+				end
+			end
+		end
+
 		data = get_json_from_file()
 		data.each do |project, groups|
 			# if(project == "#Stats")
@@ -197,8 +239,12 @@ class Todo
 			groups.each do |group, statuses|
 				# if this a group name, it starts with +
 				if(group.to_s[0] == "+")
+					if(!filter_group.nil? and filter_group != group.to_s)
+						# Continue if this is not a group we want to see.
+						next
+					end
 					output << "\n\t#{group}:\n"+
-					     "\t#{"-" * (group.to_s.length + 1)}\n\n"										
+					     "\t#{"-" * (group.to_s.length + 1)}\n"										
 					# this variable tells us if we haven't found
 					# any tasks in a single group. We instantiate
 					# to nil, and set it to false if something found.
@@ -209,14 +255,27 @@ class Todo
 					statuses.each do |status, tasks|
 						if(tasks.length > 0)
 							# we found at least one task in one of the statuses
-							# so							
-							no_entries = false
-							output << "\t#{status}: \n"							 
+							if((!filter_status.nil?) and (filter_status != status))
+								# continue if we're filtering
+								next
+							end							
+							no_entries = false				 
 							count = 0
+							task_output = ""							
 							for task in tasks
-								count = count + 1
-								output << "\t\t#{count}. "
-								output << "#{(status == "Done" ? "✓" : "☐")} #{task}\n"
+								# if we're doing a word filter on the tasks
+								if(!filter_task.nil? and !task.include? filter_task) 
+									debug("Omitted a task due to filter.")
+									next
+								end
+								count = count + 1								
+								task_output << "\t\t#{count}. "
+								task_output << "#{(status == "#{@DONE_STATUS}" ? "✓" : "☐")} #{task}\n"
+							end
+							# Only if tasks were found, do we print the group status.
+							if(count > 0)						
+								output << "\t#{status}: \n"
+								output << task_output
 							end
 						else
 							no_entries = true if no_entries.nil?
@@ -329,20 +388,20 @@ class Todo
 
 		if(groups.include? group) 
 			# puts "The group #{group} already exists."
-			if(data[name][group]["Pending"].include? task)
+			if(data[name][group]["#{@NOT_DONE_STATUS}"].include? task)
 				error "That task already exists."
 				exit
 			else
 				puts "Added task \"#{task}\", under the \"#{group}\" group."
-				data[name][group]["Pending"].push("#{task}")
+				data[name][group]["#{@NOT_DONE_STATUS}"].push("#{task}")
 			end
 		else
 			puts "Adding new group '#{group}'."	
 			puts "Adding task: #{task}."
 			# add the task to this group and set up task statuses.			
 			data[name][group] = {			 
-									 "Pending" => ["#{task}"],
-									  "Done" => []
+									 "#{@NOT_DONE_STATUS}" => ["#{task}"],
+									  "#{@DONE_STATUS}" => []
 								}			
 		end
 		save_json_into_file(data)	# saves json data
@@ -362,15 +421,26 @@ class Todo
 		if(file.to_s == "")
 			file = "help"					
 		end
-		filepath = File.expand_path(File.dirname(__FILE__)) +"/help/#{file}.txt"
-		if(File.exists?( filepath ))
-			file = File.new(filepath, "r")
-			file.each do |line|
-				print line
+		# list all available help files
+		if(file == "topics" or file == "topic")		
+			puts "The following topics are available:\n"
+			Dir.glob("#{@PWD}/help/*.txt") do |file|
+				  # do work on files ending in .rb in the desired directory
+				  print "#{Pathname.new(file).basename.to_s.gsub(".txt", "")}\t"
 			end
-			file.close()
+			puts "\n\nTry any of the topics above for more information. Usage: todo help <topic>"
 		else
-			error "Your helpfile folder is missing or damaged. Please reinstall from:\n#{@GIT}"
+			# list a specific file
+			filepath = File.expand_path(File.dirname(__FILE__)) +"/help/#{file}.txt"
+			if(File.exists?( filepath ))
+				file = File.new(filepath, "r")
+				file.each do |line|
+					print line
+				end
+				file.close()
+			else
+				error "Help on that topic could not be found. Try 'todo help topics' to see available topics."
+			end
 		end
 	end
 

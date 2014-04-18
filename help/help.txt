@@ -1,22 +1,20 @@
- ✅ Todo List Command: 	
+ 	✅ Todo List Command: 	
 	=====================
 	Usage: todo <action> (parameters...)	    
-
 	Actions & Parameters:
-	---------------------
 	init		- Creates a todo list in this directory, becoming the parent directory.
 			  	  Once done, you can update the todo list from any subdirectory.
 	a(dd) text 	- Add a task to a +group-name in the todo list.
 				  You may organize tasks under a custom +group, by prepending a +group's name
 				  before adding a task's text. If no group specified, default or last one is used.
 	install		- One time installation on the host machine. Must be in the dir of the script!
-	nuke		- This deletes the to do list content (json & txt). Parameter 'force' skips safe prompt.
-	help topic	- A little more info on a specific topic.
+	n(uke)		- This deletes the to do list content (json & txt). Parameter 'force' skips safe prompt.
+	h(elp) 		- A little more info on a specific topic. See 'help topics' for available options.
 	l(ist)		- Shows todo list. It will accept the following additional parameters as filters:
+					u(nchecked) - Filters the list, showing only pending (unchecked) tasks.	
+					c(hecked)	- Filters the list, showing only completed (checked) tasks.	
 					+group_name	- Shows only tasks of the following group.
-					u(nchecked) 	- Filters the list, showing only pending (unchecked) tasks.	
-	In the Pipeline:
-	-----------------
+	Coming Soon:
 	c(heck)		- Checks a task as completed (✓). Accepts the following parameters:
 					+<group_name>	- Specifies the group the task to be checked belongs to.
 					<task_id> | all	- Task to mark as completed.
