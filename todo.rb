@@ -29,38 +29,38 @@ class Todo
 		return help? if(arg.nil? or arg.length < 1)		
 
 		if("init".start_with? arg[0]) # done
-			setup(arg[1])		
+			return setup(arg[1])		
 		elsif("add".start_with? arg[0]) # add
-			add( arg[1..-1].join(" ") ) # exclude first param						
+			return add( arg[1..-1].join(" ") ) # exclude first param						
 		elsif("check".start_with? arg[0]) # marks a task as done
-			check(arg[1])			
+			return check(arg[1])			
 		elsif("uncheck".start_with? arg[0]) # marks as uncomplete 
-			uncheck(arg[1])			
+			return uncheck(arg[1])			
 		elsif("delete".start_with? arg[0]) # deletes a task 
-			delete(arg[1])			
+			return delete(arg[1])			
 		# elsif("description".start_with? arg[0]) #"description" 
 		# 	description(arg[1])						
 		elsif("list".start_with? arg[0]) # lists tasks
-			list(arg[1..-1])						
+			return list(arg[1..-1])						
 		# elsif("priority".start_with? arg[0]) # priority
 		# 	priority(arg[1..-1])
 		elsif("find".start_with? arg[0]) # search or find
-			search(arg[1..-1].join(" "))
+			return search(arg[1..-1].join(" "))
 		elsif("status".start_with? arg[0]) 
-			status()							
+			return status()							
 		elsif("remote".start_with? arg[0]) 
-			remote(arg[1])
+			return remote(arg[1])
 		elsif("push".start_with? arg[0]) 
-			push(arg[1])			
+			return push(arg[1])			
 		elsif("install".start_with? arg[0])
-			install()			
+			return install()			
 		elsif("help".start_with? arg[0]) 
-			help? arg[1]				
+			return help? arg[1]				
 		elsif("nuke".start_with? arg[0]) 
-			nuke arg[1]
+			return nuke arg[1]
 		else
 			error "Invalid parameters: #{ARGV.join(", ")}"
-			help?
+			return help?
 		end
 	end
 
@@ -136,7 +136,8 @@ class Todo
 	# end
 
 	def setup(str)
-		if(find_recursive_todo_path()) 
+		#if(find_recursive_todo_path()) 
+		if(todo_file_exists?(Pathname.new(@CWD)))
 			puts "A to do list already exists in #{@PWD}/#{@FILE}\nTry 'help', instead of 'init' to learn more."
 			return
 		end		
@@ -185,7 +186,8 @@ class Todo
 	# Renders the JSON file to screen, in a user friendly format.
 	def render_txt(arg=nil) 
 		if(!find_recursive_todo_path()) 
-			error "No todo list found. Use the parameter 'init' to create one."			
+			error "No todo list found. Use the parameter 'init' to create one."
+			exit
 		end
 		# var that will hold all the output of this method
 		output = ""		
@@ -348,8 +350,8 @@ class Todo
 		if(str.to_s == "" or str[0] != "+" or str.split(" ").length < 2)
 			str = "#{@default_group} #{str}"
 			# error "Tasks require a +groupname and the description of the task.\n"+
-			# 	  "Command: todo add +groupname task-text\n"+
-			# 	  "Example: todo add +authentication Note to self remember to code a login form."
+			#  "Command: todo add +groupname task-text\n"+
+			#  "Example: todo add +authentication Note to self remember to code a login form."
 			# return
 		end						
 
@@ -362,6 +364,8 @@ class Todo
 			error "No #{@FILE} found. You must first type: todo init"
 			return
 		end
+
+		puts "#{str}"
 		data = "" 
 		file = File.new(@FILE, "r")
 		file.each do |line|
@@ -372,7 +376,8 @@ class Todo
 		begin
 			data = JSON.parse(data)
 		rescue Exception => e
-			error "Invalid JSON in #{@FILE}. This is weird... Did you manually edit it?\nHere's the error:\n#{e.inspect}"
+			error "Invalid JSON in #{@FILE}. This is weird... "+
+			      "Did you manually edit it?\nHere's the error:\n#{e.inspect}"
 			exit
 		end
 
@@ -451,6 +456,23 @@ class Todo
 			return
 		end
 
+		begin
+			path = (ENV['HOME']+'/.bash_profile')
+			f = File.open(path, 'r')
+			text = f.read
+			if text =~ /alias todo/ then
+				puts "It appears aliases are already set up in your .bash_profile. "+
+				     "Let's try sourcing it...."
+				system("source ~/.bash_profile")
+				puts "Done!"
+				puts "Now take it for a spin, type: 't help'"
+			end
+			f.close
+			return
+		rescue Exception => e
+			puts "Error reading your user's .bash_profile file: #{e}" 
+			exit
+		end
 		puts "Setting up aliases 't', 'todo' and 'task' in bash, for easy access from terminal."
 		command = "alias t='ruby #{@CWD}/todo.rb';\n"+
 				  "alias todo='ruby #{@CWD}/todo.rb';\n"+
@@ -482,7 +504,7 @@ class Todo
 		# Here we essentially do: Pathname.children(with_folders=false)
 		# to find if the directory contains a @FILE		
  		dir.children(false).each do |file|
- 				debug "Searching for #{@FILE} vs #{file}" 				 			
+			debug "Searching for #{@FILE} vs #{file}" 				 			
  			if file.basename.to_s == @FILE.to_s
  				debug "We found a #{@FILE} in #{dir}!"
  				return true

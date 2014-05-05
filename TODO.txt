@@ -1,0 +1,13 @@
+
+	✅ Project: First
+	================
+
+
+	+Tasks:
+	-------
+	Pending: 
+		1. ☐ Run ruby todo.rb install to set up aliases.
+		2. ☐ Try todo, task or t for short. Try t list.
+
+---
+Auto-generated using: github.com/mindware/todo

@@ -1,10 +1,10 @@
 
 Adding Tasks:
 -------------
-Once you've initialized a to do list, you can run commands on it from any of its
+Once you've initialized a to-do list, you can run commands on it from any of its
 subdirectories, it'll automatically find it. Cool, eh? 
 
-You can add tasks to your to do list by simply typing any of the
+You can add tasks to your to-do list by simply typing any of the
 following commands:
 
 "todo add <your task here>"
