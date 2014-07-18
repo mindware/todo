@@ -19,8 +19,8 @@ class Todo
 		@FILE  	= ".TODO.json"						# Name of the hidden file that contains data.
 		@TXT 		= "TODO.txt"						# Name of file we render text to (overwrites).
 		@GIT   	= "https://github.com/mindware/"	# Official Github repo
-		@NOT_DONE_STATUS	= "Pending"
-		@DONE_STATUS			= "Done"
+		@NOT_DONE_STATUS	= "Unchecked"
+		@DONE_STATUS			= "Checked"
 		# @disclaimer = 	"# Auto-generated file. Manual edits are overwritten. \n"+
 		# 				"# Get it here: http://github.com/mindware/todo\n\n"
 		@disclaimer 			= 	"---\nAuto-generated using: github.com/mindware/todo\n"
@@ -385,12 +385,12 @@ class Todo
 								count = count + 1
 								task_output << "\t#{(status == "#{@DONE_STATUS}" ?
 															 count.to_s.green :
-															 count.to_s.red)}. "
+															 count.to_s.bold.red)}. "
 								task_output << "#{task}\n"
 							end
 							# Only if tasks were found, do we print the group status.
 							if(count > 0)
-								output << "\t#{(status == "#{@DONE_STATUS}" ? status.bold.green : status.bold.red)}:\n"
+								output << "\t#{(status == "#{@DONE_STATUS}" ? status.bold.green : status.bold.yellow)}:\n"
 								output << task_output
 							end
 						else
@@ -585,36 +585,40 @@ class Todo
 
 		if(groups.include? group)
 			# conver task index to integer. If invalid conversion, it'll equal 0.
+		  if(task.strip == "")
+				error "Invalid task number."
+				exit
+		  end
 			task = task.to_i
 			if task == 0
-				puts "You must supply a valid task id number (for group #{group})"
+				puts "You must supply a valid task number for deletion "+
+				"(ie: #{"todo delete <number>".bold.yellow} or #{"t d #".bold.yellow} "+
+				"for short). Optionally you can supply a "+
+				"group name with a proper valid task number (ie: "+
+				"#{"todo delete +<group-name> <number>".bold.yellow}). "+
+				"If you're trying to delete the "+
+				"#{group.gsub("+", "+".yellow)} group entirely, use the "+
+				"#{"todo purge <group-name>".black} command."
 				exit
 			end
 
-
-			# puts "The group #{group} already exists."
-			if(data[name][group]["#{@NOT_DONE_STATUS}"].include? task)
-				error "That task already exists."
-				exit
-			elsif(task.strip == "")
-				error "That task is empty."
-				exit
+			if(task > 0 and task <= tasks.length)
+				puts "#{"Deleting".bold.red} the task number #{task.to_s.bold.green}, "+
+						"under the #{group.gsub("+", "+".yellow)} group."
+				data[name][group].delete_at(task - 1)
 			else
-				puts "Added task \"#{task}\", under the \"#{group}\" group."
-				data[name][group]["#{@NOT_DONE_STATUS}"].push("#{task}")
+				error "That task doesn't exist."
+				exit
 			end
-		else
-			puts "Adding new group '#{group}'."
-			puts "Adding task: #{task}."
-			# add the task to this group and set up task statuses.
-			data[name][group] = {
-				"#{@NOT_DONE_STATUS}" => ["#{task}"],
-				"#{@DONE_STATUS}" => []
-			}
+
 		end
 		save_json_into_file(data)	# saves json data
 		save_txt_into_file()		# renders text file from json.
 		list()
+	end
+
+	def purge(str)
+		puts "This would purge a group #{str}"
 	end
 
 
