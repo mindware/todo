@@ -134,7 +134,8 @@ class Todo
 			file = File.new("#{@PWD}/#{@TXT}", "w")
 			data = render_txt
 			data << @disclaimer
-			file.write(data)
+			# Save to file, stirp the colors
+			file.write(data.no_colors)
 			file.close()
 		rescue Exception => e
 			error "An error ocurred while rendering the todo.txt file:\n#{e.inspect}"
@@ -198,7 +199,7 @@ class Todo
 	end
 
 	# Marking a task as completed.
-	def check(arg)
+	def check(str)
 		if(!find_recursive_todo_path())
 			error "There is no To Do List yet. Use the parameter 'init' to set it up."
 			return
@@ -249,18 +250,31 @@ class Todo
 		debug "I found these groups: #{groups}"
 
 		if(groups.include? group)
-			# puts "The group #{group} already exists."
 
-			#
-			# This needs to change to use an id, instead of the actual task
-			# being searched.
-			#
-			if(!data[name][group]["#{@NOT_DONE_STATUS}"].include? task)
+			# conver task index to integer. If invalid conversion, it'll equal 0.
+			task = task.to_i
+			if task == 0
+				puts "You must supply a task id number (for group #{group})"
+				exit
+			end
+
+			# This searches using the task index, where the task is
+			# a number that represents a task in the pending list.
+			tasks = data[name][group]["#{@NOT_DONE_STATUS}"]
+			puts "#{group.gsub("+", "+".yellow)} group has #{tasks.length} "+
+					 "#{@NOT_DONE_STATUS} items. You've chosen to mark as checked task "+
+					 "number #{task.to_s.bold.green}."
+
+			if(task > 0 and task <= tasks.length)
+				puts "Marking as done the task number #{task.to_s.bold.green}, "+
+						 "under the #{group.gsub("+", "+".yellow)} group."
+				# grab the actual item from the task list, with this task id
+				# by deleting it from the pending list. (delete_at returns the contents)
+				item = data[name][group]["#{@NOT_DONE_STATUS}"].delete_at(task - 1)
+				data[name][group]["#{@DONE_STATUS}"].push(item)
+			else
 				error "That task doesn't exist."
 				exit
-			else
-				puts "Marking as done the task \"#{task}\", under the \"#{group}\" group."
-				data[name][group]["#{@DONE_STATUS}"].push("#{task}")
 			end
 		else
 			puts "Adding new group '#{group}'."
@@ -334,8 +348,8 @@ class Todo
 			# 	next
 			# end
 
-			output << "\n✅ Project: #{project}\n"+
-			"#{"=" * ("✅ Project: #{project}".length)}\n"
+			output << "\n#{"Project".blue}: #{project.bold.cyan}\n"+
+			"#{("=" * ("Project: #{project}".length)).blue}\n"
 			groups.each do |group, statuses|
 				# if this a group name, it starts with +
 				if(group.to_s[0] == "+")
@@ -343,8 +357,8 @@ class Todo
 						# Continue if this is not a group we want to see.
 						next
 					end
-					output << "\n#{group}:\n"+
-					"#{"-" * (group.to_s.length + 1)}\n"
+					output << "\n#{group.gsub("+", "+".yellow)}:\n"+
+					"#{("-" * (group.to_s.length + 1)).bold.yellow}\n"
 					# this variable tells us if we haven't found
 					# any tasks in a single group. We instantiate
 					# to nil, and set it to false if something found.
@@ -369,12 +383,14 @@ class Todo
 									next
 								end
 								count = count + 1
-								task_output << "\t#{count}. "
-								task_output << "#{(status == "#{@DONE_STATUS}" ? "✓" : "☐")} #{task}\n"
+								task_output << "\t#{(status == "#{@DONE_STATUS}" ?
+															 count.to_s.green :
+															 count.to_s.red)}. "
+								task_output << "#{task}\n"
 							end
 							# Only if tasks were found, do we print the group status.
 							if(count > 0)
-								output << "\t#{status}: \n"
+								output << "\t#{(status == "#{@DONE_STATUS}" ? status.bold.green : status.bold.red)}:\n"
 								output << task_output
 							end
 						else
@@ -541,15 +557,6 @@ class Todo
 			return
 		end
 
-		# conver task index to integer. If invalid conversion, it'll equal 0.
-	  task = task.to_i
-		if task == 0
-			puts "You must supply a task id number (for group #{group})"
-			exit
-		end
-
-		exit
-
 		# puts "#{str}"
 		data = ""
 		file = File.new(@FILE, "r")
@@ -577,6 +584,14 @@ class Todo
 		debug "I found these groups: #{groups}"
 
 		if(groups.include? group)
+			# conver task index to integer. If invalid conversion, it'll equal 0.
+			task = task.to_i
+			if task == 0
+				puts "You must supply a valid task id number (for group #{group})"
+				exit
+			end
+
+
 			# puts "The group #{group} already exists."
 			if(data[name][group]["#{@NOT_DONE_STATUS}"].include? task)
 				error "That task already exists."
