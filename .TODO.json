@@ -1,1 +1,1 @@
-{"Todo":{"+Tasks":{"Unchecked":["Testy"],"Checked":["test"]}}}
+{"Todo":{"+Tasks":{"Pending":["Update delete command","Add purge command for deleting groups.","Update delete command so that we know exactly which status were deleting from","Do something about single and double quotes. Force all descriptions to be in double quotes"],"Done":["Make this an awesome command line utility."]}}}

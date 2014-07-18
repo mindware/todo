@@ -4,10 +4,13 @@ Project: Todo
 
 +Tasks:
 -------
-	Unchecked:
-	1. Testy
-	Checked:
-	1. test
+	Pending:
+	1. Update delete command
+	2. Add purge command for deleting groups.
+	3. Update delete command so that we know exactly which status were deleting from
+	4. Do something about single and double quotes. Force all descriptions to be in double quotes
+	Done:
+	1. Make this an awesome command line utility.
 
 ---
 Auto-generated using: github.com/mindware/todo
