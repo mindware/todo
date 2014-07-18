@@ -8,6 +8,9 @@
 	Pending: 
 		1. ☐ Run ruby todo.rb install to set up aliases.
 		2. ☐ Try todo, task or t for short. Try t list.
+		3. ☐ 
+		4. ☐ how is this just
+		5. ☐ how is this great job
 
 ---
 Auto-generated using: github.com/mindware/todo
