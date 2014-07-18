@@ -19,8 +19,8 @@ class Todo
 		@FILE  	= ".TODO.json"						# Name of the hidden file that contains data.
 		@TXT 		= "TODO.txt"						# Name of file we render text to (overwrites).
 		@GIT   	= "https://github.com/mindware/"	# Official Github repo
-		@NOT_DONE_STATUS	= "Unchecked"
-		@DONE_STATUS			= "Checked"
+		@NOT_DONE_STATUS	= "Pending"
+		@DONE_STATUS			= "Done"
 		# @disclaimer = 	"# Auto-generated file. Manual edits are overwritten. \n"+
 		# 				"# Get it here: http://github.com/mindware/todo\n\n"
 		@disclaimer 			= 	"---\nAuto-generated using: github.com/mindware/todo\n"
