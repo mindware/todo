@@ -357,8 +357,8 @@ class Todo
 						# Continue if this is not a group we want to see.
 						next
 					end
-					output << "\n#{group.gsub("+", "+".yellow)}:\n"+
-					"#{("-" * (group.to_s.length + 1)).bold.yellow}\n"
+					output << "\n#{group.gsub("+", "+".yellow)}\n"+
+					"#{("-" * (group.to_s.length)).bold.magenta}\n"
 					# this variable tells us if we haven't found
 					# any tasks in a single group. We instantiate
 					# to nil, and set it to false if something found.
@@ -383,14 +383,14 @@ class Todo
 									next
 								end
 								count = count + 1
-								task_output << "\t#{(status == "#{@DONE_STATUS}" ?
+								task_output << "#{(status == "#{@DONE_STATUS}" ?
 															 count.to_s.green :
 															 count.to_s.bold.red)}. "
 								task_output << "#{task}\n"
 							end
 							# Only if tasks were found, do we print the group status.
 							if(count > 0)
-								output << "\t#{(status == "#{@DONE_STATUS}" ? status.bold.green : status.bold.yellow)}:\n"
+								output << "#{(status == "#{@DONE_STATUS}" ? status.bold.green : status.bold.yellow)}:\n"
 								output << task_output
 							end
 						else
@@ -398,13 +398,13 @@ class Todo
 						end
 					end
 					if no_entries == true
-						output << "\tNothing here yet, add a task with:\n\ttask add <your text here> \n"
+						output << "Nothing here yet, add a task with:\ntask add <your text here> \n"
 					end
 				else
 					# For general information, non-groups, such as description:
 					output << "\n#{group}:\n\n"+
 					"#{"-" * (group.to_s.length + 1)}\n\n"
-					output << "\t#{statuses}\n\n"
+					output << "#{statuses}\n\n"
 				end
 			end
 		end
