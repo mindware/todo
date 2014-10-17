@@ -470,9 +470,9 @@ class Todo
 		end
 
 		# Get the group and the task
-		str = str.split(" ")
+		str   = str.split(" ")
 		group = str[0]
-		task = str[1..-1].join(" ")
+		task  = str[1..-1].join(" ")
 
 		Dir.chdir(@PWD)
 		if(!File.exists? (@FILE))
@@ -602,10 +602,14 @@ class Todo
 				exit
 			end
 
+			tasks = data[name][group]["#{@NOT_DONE_STATUS}"]
+
+			puts tasks
+
 			if(task > 0 and task <= tasks.length)
 				puts "#{"Deleting".bold.red} the task number #{task.to_s.bold.green}, "+
-						"under the #{group.gsub("+", "+".yellow)} group."
-				data[name][group].delete_at(task - 1)
+						 "under the #{group.gsub("+", "+".yellow)} group."
+				tasks.delete_at(task - 1)
 			else
 				error "That task doesn't exist."
 				exit
