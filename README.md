@@ -1,4 +1,4 @@
 todo
 ====
 
-The best command line tool to create to do lists for your projects
+An old attempt to build a very simple command line tool to create to do lists for your projects
